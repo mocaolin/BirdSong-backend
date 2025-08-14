@@ -13,14 +13,16 @@
 5. [数据导入](#数据导入)
 6. [启动应用](#启动应用)
 7. [反向代理配置](#反向代理配置)
-8. [常见问题](#常见问题)
+8. [SSL 证书配置](#ssl-证书配置)
+9. [监控和日志](#监控和日志)
+10. [更新部署](#更新部署)
+11. [常见问题](#常见问题)
 
 ## 系统要求
 
-- Node.js >= 14.x
-- PostgreSQL >= 12.x
-- Docker (如果使用 Docker 部署方式)
-- Nginx 或 Apache (用于反向代理，可选)
+- Docker 和 Docker Compose
+- 至少 2GB RAM 的服务器
+- 约 2GB 磁盘空间
 
 ## 部署方式
 
@@ -30,7 +32,7 @@
 
 在服务器上安装 Docker 和 Docker Compose：
 
-\```bash
+```bash
 # Ubuntu/Debian
 sudo apt update
 sudo apt install docker.io docker-compose
@@ -39,59 +41,108 @@ sudo apt install docker.io docker-compose
 sudo yum install docker docker-compose
 
 # 或者参考官方文档安装最新版本
-\```
+```
+
+启动并启用 Docker：
+
+```bash
+sudo systemctl start docker
+sudo systemctl enable docker
+```
 
 #### 2. 克隆代码库
 
-\```bash
+```bash
 git clone <repository-url>
 cd birdsong-api
-\```
+```
 
 #### 3. 配置环境变量
 
-编辑 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件，配置数据库连接和其他环境变量：
+创建 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件，配置应用环境变量：
 
-\```env
-DB_HOST=localhost
+```env
+DB_HOST=db
 DB_PORT=5432
 DB_NAME=birdsong_db
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
+DB_USER=postgres
+DB_PASSWORD=postgres
 DB_DIALECT=postgres
 PORT=3000
 NODE_ENV=production
-\```
+JWT_SECRET=your-super-secret-jwt-key
+```
+
+注意：在 Docker 部署中，[DB_HOST](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/src/config/database.js#L4-L4) 应设置为 [db](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/docker-compose.yml#L4-L4)（docker-compose.yml 中定义的服务名称），而不是 localhost。
 
 #### 4. 构建和启动服务
 
-\```bash
-# 使用 Docker Compose 启动所有服务（包括 PostgreSQL）
-docker-compose up -d
+使用 Docker Compose 启动所有服务（包括 PostgreSQL 数据库和 BirdSong API 应用）：
 
-# 或者只构建应用容器（如果已有外部数据库）
-docker build -t birdsong-api .
-docker run -d -p 3000:3000 --env-file .env birdsong-api
-\```
+```bash
+docker-compose up -d
+```
+
+此命令将：
+- 构建 BirdSong API 应用镜像
+- 启动 PostgreSQL 数据库容器
+- 启动 BirdSong API 应用容器
 
 #### 5. 初始化数据库
 
-\```bash
+首次部署时，需要初始化数据库结构：
+
+```bash
 # 进入应用容器
 docker exec -it birdsong-api_app_1 bash
 
 # 运行数据库同步
 npm run db:init
 
+# 退出容器
+exit
+```
+
+#### 6. 导入数据
+
+运行数据导入脚本将鸟类和录音数据导入数据库：
+
+```bash
+# 进入应用容器
+docker exec -it birdsong-api_app_1 bash
+
 # 运行数据导入脚本
 npm run import:data
-\```
+
+# 退出容器
+exit
+```
+
+#### 7. 验证部署
+
+检查服务状态：
+
+```bash
+docker-compose ps
+```
+
+查看应用日志：
+
+```bash
+docker-compose logs app
+```
+
+测试 API 是否正常工作：
+
+```bash
+curl http://localhost:3000/api/birds?page=1&limit=5
+```
 
 ### 方式二：直接部署到服务器
 
 #### 1. 安装依赖
 
-\```bash
+```bash
 # 安装 Node.js (使用 NodeSource)
 curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
 sudo apt-get install -y nodejs
@@ -99,19 +150,19 @@ sudo apt-get install -y nodejs
 # 安装 PostgreSQL
 sudo apt update
 sudo apt install postgresql postgresql-contrib
-\```
+```
 
 #### 2. 克隆代码库
 
-\```bash
+```bash
 git clone <repository-url>
 cd birdsong-api
 npm install --production
-\```
+```
 
 #### 3. 配置 PostgreSQL
 
-\```bash
+```bash
 # 启动 PostgreSQL 服务
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
@@ -122,22 +173,22 @@ sudo -u postgres createuser your_db_user
 
 # 设置用户密码和权限
 sudo -u postgres psql
-\```
+```
 
 在 PostgreSQL shell 中运行：
 
-\```sql
+```sql
 ALTER USER your_db_user WITH PASSWORD 'your_db_password';
 ALTER USER your_db_user CREATEDB;
 GRANT ALL PRIVILEGES ON DATABASE birdsong_db TO your_db_user;
 \q
-\```
+```
 
 #### 4. 配置环境变量
 
 创建 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件：
 
-\```env
+```env
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=birdsong_db
@@ -146,15 +197,32 @@ DB_PASSWORD=your_db_password
 DB_DIALECT=postgres
 PORT=3000
 NODE_ENV=production
-\```
+JWT_SECRET=your-super-secret-jwt-key
+```
+
+## 环境变量配置
+
+以下环境变量可以在 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件中配置：
+
+| 变量名 | 描述 | 默认值 |
+|--------|------|--------|
+| DB_HOST | 数据库主机地址 | localhost |
+| DB_PORT | 数据库端口 | 5432 |
+| DB_NAME | 数据库名称 | birdsong_db |
+| DB_USER | 数据库用户名 | - |
+| DB_PASSWORD | 数据库密码 | - |
+| DB_DIALECT | 数据库类型 | postgres |
+| PORT | 应用监听端口 | 3000 |
+| NODE_ENV | 运行环境 | development |
+| JWT_SECRET | JWT 密钥 | - |
 
 ## 数据库初始化
 
 无论使用哪种部署方式，都需要初始化数据库结构：
 
-\```bash
+```bash
 npm run db:init
-\```
+```
 
 这将根据模型定义创建或更新数据库表结构。该命令执行的是 `scripts/syncDatabase.js` 脚本。
 
@@ -162,9 +230,9 @@ npm run db:init
 
 运行数据导入脚本将鸟类和录音数据导入数据库：
 
-\```bash
+```bash
 npm run import:data
-\```
+```
 
 这将读取 `json_parts` 目录中的所有 JSON 文件并将数据导入数据库。该命令执行的是 `scripts/importData.js` 脚本。
 
@@ -176,29 +244,29 @@ PM2 是一个生产环境的 Node.js 进程管理器。
 
 #### 1. 安装 PM2
 
-\```bash
+```bash
 sudo npm install -g pm2
-\```
+```
 
 #### 2. 启动应用
 
-\```bash
+```bash
 pm2 start src/server.js --name birdsong-api
 pm2 startup
 pm2 save
-\```
+```
 
 ### 直接启动
 
-\```bash
+```bash
 npm start
-\```
+```
 
 或者在后台运行：
 
-\```bash
+```bash
 nohup npm start > app.log 2>&1 &
-\```
+```
 
 ## 反向代理配置
 
@@ -206,16 +274,19 @@ nohup npm start > app.log 2>&1 &
 
 ### 安装 Nginx
 
-\```bash
-sudo apt update
+```bash
+# Ubuntu/Debian
 sudo apt install nginx
-\```
+
+# CentOS/RHEL
+sudo yum install nginx
+```
 
 ### 配置 Nginx
 
-创建配置文件 `/etc/nginx/sites-available/birdsong`：
+创建 Nginx 配置文件 `/etc/nginx/sites-available/birdsong-api`：
 
-\```nginx
+```nginx
 server {
     listen 80;
     server_name your_domain.com;
@@ -232,54 +303,33 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 }
-\```
+```
 
 启用配置：
 
-\```bash
-sudo ln -s /etc/nginx/sites-available/birdsong /etc/nginx/sites-enabled/
+```bash
+sudo ln -s /etc/nginx/sites-available/birdsong-api /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
-\```
+```
 
-### 配置 SSL 证书（可选但推荐）
+## SSL 证书配置
 
-使用 Let's Encrypt 获取免费 SSL 证书：
+使用 Let's Encrypt 免费 SSL 证书：
 
-\```bash
+### 1. 安装 Certbot
+
+```bash
 sudo apt install certbot python3-certbot-nginx
+```
+
+### 2. 获取 SSL 证书
+
+```bash
 sudo certbot --nginx -d your_domain.com
-\```
+```
 
-## 常见问题
-
-### 1. 数据库连接失败
-
-检查以下几点：
-- 数据库服务是否正在运行
-- 环境变量配置是否正确
-- 数据库用户权限是否正确
-- 防火墙是否阻止了数据库端口
-
-### 2. 数据导入失败
-
-如果数据导入过程中出现错误：
-- 检查数据格式是否正确
-- 确保数据库表结构已正确创建
-- 查看错误日志获取详细信息
-
-### 3. API 无法访问
-
-- 检查应用是否正在运行
-- 检查防火墙设置
-- 检查反向代理配置
-- 查看应用日志获取错误信息
-
-### 4. 性能问题
-
-- 考虑为数据库添加索引
-- 使用 PM2 集群模式运行多个应用实例
-- 配置适当的缓存策略
+Certbot 会自动修改 Nginx 配置并重启 Nginx。
 
 ## 监控和日志
 
@@ -287,21 +337,42 @@ sudo certbot --nginx -d your_domain.com
 
 如果使用 PM2：
 
-\```bash
+```bash
 pm2 logs birdsong-api
-\```
+```
 
-### 监控应用状态
+如果使用 Docker：
 
-\```bash
-pm2 monit
-\```
+```bash
+docker-compose logs -f app
+```
+
+### 系统监控
+
+可以使用 htop、iotop 等工具监控系统资源使用情况：
+
+```bash
+sudo apt install htop iotop
+htop
+iotop
+```
 
 ## 更新部署
 
-要更新到最新版本：
+### 使用 Docker 更新
 
-\```bash
+```bash
+# 拉取最新代码
+git pull
+
+# 重新构建并启动容器
+docker-compose down
+docker-compose up -d --build
+```
+
+### 直接部署更新
+
+```bash
 # 拉取最新代码
 git pull
 
@@ -309,22 +380,30 @@ git pull
 npm install --production
 
 # 重启应用
-pm2 reload birdsong-api
+pm2 restart birdsong-api
+```
 
-# 如果有数据库迁移
-npm run db:migrate
-\```
+## 常见问题
 
-## 备份和恢复
+### 1. 数据库连接失败
 
-### 数据库备份
+检查以下几点：
+- 数据库服务是否正在运行
+- 数据库连接参数是否正确
+- 数据库用户是否有正确的权限
+- 防火墙是否阻止了数据库端口
 
-\```bash
-pg_dump -h localhost -U your_db_user birdsong_db > birdsong_backup.sql
-\```
+### 2. API 返回 502 错误
 
-### 数据库恢复
+如果使用 Nginx 作为反向代理，可能是应用未启动或端口配置错误。
 
-\```bash
-psql -h localhost -U your_db_user birdsong_db < birdsong_backup.sql
-\```
+### 3. 内存不足
+
+如果服务器内存不足，考虑添加交换空间：
+
+```bash
+sudo fallocate -l 1G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
