@@ -51,10 +51,17 @@ check_dependencies() {
         exit 1
     fi
     
-    if ! command_exists docker-compose; then
+    # 检查 docker-compose 命令是否存在
+    if command_exists docker-compose; then
+        DOCKER_COMPOSE_CMD="docker-compose"
+    elif docker compose version >/dev/null 2>&1; then
+        DOCKER_COMPOSE_CMD="docker compose"
+    else
         error "未找到 docker-compose，请先安装 docker-compose"
         exit 1
     fi
+    
+    log "使用 Docker Compose 命令: $DOCKER_COMPOSE_CMD"
     
     if ! command_exists git; then
         error "未找到 git，请先安装 git"
@@ -100,11 +107,11 @@ deploy_with_docker() {
     
     # 停止可能正在运行的服务
     log "停止可能正在运行的服务..."
-    docker-compose down >/dev/null 2>&1 || true
+    $DOCKER_COMPOSE_CMD down >/dev/null 2>&1 || true
     
     # 构建并启动服务
     log "构建并启动服务..."
-    docker-compose up -d --build
+    $DOCKER_COMPOSE_CMD up -d --build
     
     # 等待服务启动
     log "等待服务启动..."
@@ -112,10 +119,10 @@ deploy_with_docker() {
     
     # 检查服务状态
     log "检查服务状态..."
-    if docker-compose ps | grep -q "Up"; then
+    if $DOCKER_COMPOSE_CMD ps | grep -q "Up"; then
         log "服务启动成功"
     else
-        error "服务启动失败，请检查日志: docker-compose logs"
+        error "服务启动失败，请检查日志: $DOCKER_COMPOSE_CMD logs"
         exit 1
     fi
 }
@@ -125,7 +132,7 @@ init_database() {
     log "初始化数据库..."
     
     # 获取应用容器名称
-    APP_CONTAINER=$(docker-compose ps -q app)
+    APP_CONTAINER=$($DOCKER_COMPOSE_CMD ps -q app)
     
     if [ -z "$APP_CONTAINER" ]; then
         error "未找到应用容器"
@@ -144,7 +151,7 @@ import_data() {
     log "导入数据..."
     
     # 获取应用容器名称
-    APP_CONTAINER=$(docker-compose ps -q app)
+    APP_CONTAINER=$($DOCKER_COMPOSE_CMD ps -q app)
     
     if [ -z "$APP_CONTAINER" ]; then
         error "未找到应用容器"
@@ -189,11 +196,11 @@ show_completion_message() {
     log "服务已启动并运行在 http://localhost:3000"
     echo
     log "可用的管理命令:"
-    log "  docker-compose logs          # 查看服务日志"
-    log "  docker-compose ps            # 查看服务状态"
-    log "  docker-compose down          # 停止服务"
-    log "  docker-compose up -d         # 启动服务"
-    log "  docker-compose restart       # 重启服务"
+    log "  $DOCKER_COMPOSE_CMD logs          # 查看服务日志"
+    log "  $DOCKER_COMPOSE_CMD ps            # 查看服务状态"
+    log "  $DOCKER_COMPOSE_CMD down          # 停止服务"
+    log "  $DOCKER_COMPOSE_CMD up -d         # 启动服务"
+    log "  $DOCKER_COMPOSE_CMD restart       # 重启服务"
     echo
     log "API 文档请参考项目 README.md 文件"
 }
