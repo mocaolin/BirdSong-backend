@@ -18,6 +18,7 @@
 9. [监控和日志](#监控和日志)
 10. [更新部署](#更新部署)
 11. [常见问题](#常见问题)
+12. [Docker 镜像源配置](#docker-镜像源配置)
 
 ## 系统要求
 
@@ -134,6 +135,8 @@ docker-compose up -d
 - 启动 PostgreSQL 数据库容器
 - 启动 BirdSong API 应用容器
 
+如果遇到网络连接问题，可能需要配置 Docker 镜像源，请参考 [Docker 镜像源配置](#docker-镜像源配置) 部分。
+
 #### 5. 初始化数据库
 
 首次部署时，需要初始化数据库结构：
@@ -188,7 +191,7 @@ curl http://localhost:3000/api/birds?page=1&limit=5
 
 #### 1. 安装依赖
 
-```bash
+```
 # 安装 Node.js (使用 NodeSource)
 curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
 sudo apt-get install -y nodejs
@@ -200,7 +203,7 @@ sudo apt install postgresql postgresql-contrib
 
 #### 2. 克隆代码库
 
-```bash
+```
 git clone <repository-url>
 cd birdsong-api
 npm install --production
@@ -208,7 +211,7 @@ npm install --production
 
 #### 3. 配置 PostgreSQL
 
-```bash
+```
 # 启动 PostgreSQL 服务
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
@@ -223,7 +226,7 @@ sudo -u postgres psql
 
 在 PostgreSQL shell 中运行：
 
-```sql
+```
 ALTER USER your_db_user WITH PASSWORD 'your_db_password';
 ALTER USER your_db_user CREATEDB;
 GRANT ALL PRIVILEGES ON DATABASE birdsong_db TO your_db_user;
@@ -234,7 +237,7 @@ GRANT ALL PRIVILEGES ON DATABASE birdsong_db TO your_db_user;
 
 创建 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件：
 
-```env
+```
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=birdsong_db
@@ -266,7 +269,7 @@ JWT_SECRET=your-super-secret-jwt-key
 
 无论使用哪种部署方式，都需要初始化数据库结构：
 
-```bash
+```
 npm run db:init
 ```
 
@@ -276,7 +279,7 @@ npm run db:init
 
 运行数据导入脚本将鸟类和录音数据导入数据库：
 
-```bash
+```
 npm run import:data
 ```
 
@@ -290,13 +293,13 @@ PM2 是一个生产环境的 Node.js 进程管理器。
 
 #### 1. 安装 PM2
 
-```bash
+```
 sudo npm install -g pm2
 ```
 
 #### 2. 启动应用
 
-```bash
+```
 pm2 start src/server.js --name birdsong-api
 pm2 startup
 pm2 save
@@ -304,13 +307,13 @@ pm2 save
 
 ### 直接启动
 
-```bash
+```
 npm start
 ```
 
 或者在后台运行：
 
-```bash
+```
 nohup npm start > app.log 2>&1 &
 ```
 
@@ -320,7 +323,7 @@ nohup npm start > app.log 2>&1 &
 
 ### 安装 Nginx
 
-```bash
+```
 # Ubuntu/Debian
 sudo apt install nginx
 
@@ -332,7 +335,7 @@ sudo yum install nginx
 
 创建 Nginx 配置文件 `/etc/nginx/sites-available/birdsong-api`：
 
-```nginx
+```
 server {
     listen 80;
     server_name your_domain.com;
@@ -353,7 +356,7 @@ server {
 
 启用配置：
 
-```bash
+```
 sudo ln -s /etc/nginx/sites-available/birdsong-api /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
@@ -365,13 +368,13 @@ sudo systemctl restart nginx
 
 ### 1. 安装 Certbot
 
-```bash
+```
 sudo apt install certbot python3-certbot-nginx
 ```
 
 ### 2. 获取 SSL 证书
 
-```bash
+```
 sudo certbot --nginx -d your_domain.com
 ```
 
@@ -383,13 +386,13 @@ Certbot 会自动修改 Nginx 配置并重启 Nginx。
 
 如果使用 PM2：
 
-```bash
+```
 pm2 logs birdsong-api
 ```
 
 如果使用 Docker：
 
-```bash
+```
 docker-compose logs -f app
 ```
 
@@ -397,7 +400,7 @@ docker-compose logs -f app
 
 可以使用 htop、iotop 等工具监控系统资源使用情况：
 
-```bash
+```
 sudo apt install htop iotop
 htop
 iotop
@@ -407,7 +410,7 @@ iotop
 
 ### 使用 Docker 更新
 
-```bash
+```
 # 拉取最新代码
 git pull
 
@@ -418,7 +421,7 @@ docker-compose up -d --build
 
 ### 直接部署更新
 
-```bash
+```
 # 拉取最新代码
 git pull
 
@@ -447,9 +450,51 @@ pm2 restart birdsong-api
 
 如果服务器内存不足，考虑添加交换空间：
 
-```bash
+```
 sudo fallocate -l 1G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
 ```
+
+## Docker 镜像源配置
+
+在某些网络环境下（特别是中国大陆地区），直接从 Docker Hub 拉取镜像可能会遇到网络超时问题。为了解决这个问题，可以配置 Docker 镜像加速器。
+
+### 配置方法
+
+1. 编辑或创建 `/etc/docker/daemon.json` 文件：
+   ```bash
+   sudo nano /etc/docker/daemon.json
+   ```
+
+2. 添加以下内容：
+   ```json
+   {
+     "registry-mirrors": [
+       "https://docker.mirrors.ustc.edu.cn",
+       "https://hub-mirror.c.163.com"
+     ]
+   }
+   ```
+
+3. 重启 Docker 服务：
+   ```bash
+   sudo systemctl restart docker
+   ```
+
+配置完成后，再次尝试部署应用。
+
+### 其他解决方案
+
+如果配置镜像源后仍然存在问题，可以尝试以下方法：
+
+1. 手动拉取所需的镜像：
+   ```bash
+   docker pull postgres:15
+   docker pull node:16
+   ```
+
+2. 使用一键部署脚本，它内置了重试机制来处理网络问题。
+
+3. 如果网络问题持续存在，可以考虑使用代理或 VPN。
