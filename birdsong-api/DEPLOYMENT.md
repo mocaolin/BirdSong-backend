@@ -6,8 +6,9 @@
 
 1. [系统要求](#系统要求)
 2. [部署方式](#部署方式)
-   - [方式一：使用 Docker 部署（推荐）](#方式一使用-docker-部署推荐)
-   - [方式二：直接部署到服务器](#方式二直接部署到服务器)
+   - [方式一：使用一键部署脚本（推荐）](#方式一使用一键部署脚本推荐)
+   - [方式二：使用 Docker 部署](#方式二使用-docker-部署)
+   - [方式三：直接部署到服务器](#方式三直接部署到服务器)
 3. [环境变量配置](#环境变量配置)
 4. [数据库初始化](#数据库初始化)
 5. [数据导入](#数据导入)
@@ -26,7 +27,52 @@
 
 ## 部署方式
 
-### 方式一：使用 Docker 部署（推荐）
+### 方式一：使用一键部署脚本（推荐）
+
+项目提供了一键部署脚本 [deploy.sh](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/deploy.sh)，可以自动完成整个部署过程。
+
+#### 1. 下载脚本
+
+```bash
+# 克隆代码库
+git clone <repository-url>
+cd birdsong-api
+```
+
+#### 2. 运行一键部署脚本
+
+```bash
+# 给脚本添加执行权限
+chmod +x deploy.sh
+
+# 运行一键部署脚本
+./deploy.sh
+```
+
+脚本将自动完成以下操作：
+1. 检查依赖（Docker、docker-compose、git）
+2. 配置环境变量
+3. 构建并启动 Docker 服务
+4. 初始化数据库
+5. 导入数据
+6. 验证部署
+
+#### 3. 验证部署
+
+部署完成后，可以通过以下命令验证服务状态：
+
+```bash
+# 查看服务状态
+docker-compose ps
+
+# 查看应用日志
+docker-compose logs app
+
+# 测试 API
+curl http://localhost:3000/api/birds?page=1&limit=5
+```
+
+### 方式二：使用 Docker 部署
 
 #### 1. 安装 Docker 和 Docker Compose
 
@@ -94,7 +140,7 @@ docker-compose up -d
 
 ```bash
 # 进入应用容器
-docker exec -it birdsong-api_app_1 bash
+docker exec -it birdsong_api bash
 
 # 运行数据库同步
 npm run db:init
@@ -109,7 +155,7 @@ exit
 
 ```bash
 # 进入应用容器
-docker exec -it birdsong-api_app_1 bash
+docker exec -it birdsong_api bash
 
 # 运行数据导入脚本
 npm run import:data
@@ -138,7 +184,7 @@ docker-compose logs app
 curl http://localhost:3000/api/birds?page=1&limit=5
 ```
 
-### 方式二：直接部署到服务器
+### 方式三：直接部署到服务器
 
 #### 1. 安装依赖
 
