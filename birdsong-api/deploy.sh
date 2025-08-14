@@ -101,17 +101,66 @@ setup_env() {
     fi
 }
 
+# 配置 Docker 镜像源（针对中国用户）
+configure_docker_registry() {
+    log "检查 Docker 镜像源配置..."
+    
+    # 检查是否在中国大陆
+    # 这里使用一个简单的方法：检查时区
+    if [ "$(date +%z)" = "+0800" ]; then
+        warn "检测到可能在中国大陆地区，如果遇到镜像拉取问题，建议配置 Docker 镜像加速器"
+        echo "参考: https://github.com/docker-practice/docker-registry-cn-mirror-test/actions/workflows/registry-test.yml"
+        echo "配置方法:"
+        echo "  1. 编辑或创建 /etc/docker/daemon.json 文件"
+        echo "  2. 添加以下内容:"
+        echo '     {'
+        echo '       "registry-mirrors": ['
+        echo '         "https://docker.mirrors.ustc.edu.cn",'
+        echo '         "https://hub-mirror.c.163.com"'
+        echo '       ]'
+        echo '     }'
+        echo "  3. 重启 Docker 服务: sudo systemctl restart docker"
+        echo
+    fi
+}
+
 # 构建并启动 Docker 服务
 deploy_with_docker() {
     log "开始 Docker 部署..."
+    
+    # 配置 Docker 镜像源提示
+    configure_docker_registry
     
     # 停止可能正在运行的服务
     log "停止可能正在运行的服务..."
     $DOCKER_COMPOSE_CMD down >/dev/null 2>&1 || true
     
-    # 构建并启动服务
+    # 构建并启动服务（带重试机制）
     log "构建并启动服务..."
-    $DOCKER_COMPOSE_CMD up -d --build
+    local max_attempts=3
+    local attempt=1
+    local success=false
+    
+    while [ $attempt -le $max_attempts ]; do
+        log "尝试第 $attempt/$max_attempts 次构建和启动服务..."
+        if $DOCKER_COMPOSE_CMD up -d --build; then
+            success=true
+            break
+        else
+            warn "第 $attempt 次尝试失败"
+            if [ $attempt -lt $max_attempts ]; then
+                log "等待 10 秒后重试..."
+                sleep 10
+            fi
+            attempt=$((attempt + 1))
+        fi
+    done
+    
+    if [ "$success" = false ]; then
+        error "构建和启动服务失败，请检查网络连接或 Docker 配置"
+        error "如果遇到网络超时问题，请考虑配置 Docker 镜像加速器"
+        exit 1
+    fi
     
     # 等待服务启动
     log "等待服务启动..."
@@ -139,9 +188,31 @@ init_database() {
         exit 1
     fi
     
-    # 运行数据库初始化
+    # 运行数据库初始化（带重试机制）
     log "运行数据库同步..."
-    docker exec $APP_CONTAINER npm run db:init
+    local max_attempts=3
+    local attempt=1
+    local success=false
+    
+    while [ $attempt -le $max_attempts ]; do
+        log "尝试第 $attempt/$max_attempts 次数据库初始化..."
+        if docker exec $APP_CONTAINER npm run db:init; then
+            success=true
+            break
+        else
+            warn "第 $attempt 次数据库初始化失败"
+            if [ $attempt -lt $max_attempts ]; then
+                log "等待 5 秒后重试..."
+                sleep 5
+            fi
+            attempt=$((attempt + 1))
+        fi
+    done
+    
+    if [ "$success" = false ]; then
+        error "数据库初始化失败"
+        exit 1
+    fi
     
     log "数据库初始化完成"
 }
@@ -158,9 +229,31 @@ import_data() {
         exit 1
     fi
     
-    # 运行数据导入
+    # 运行数据导入（带重试机制）
     log "运行数据导入..."
-    docker exec $APP_CONTAINER npm run import:data
+    local max_attempts=3
+    local attempt=1
+    local success=false
+    
+    while [ $attempt -le $max_attempts ]; do
+        log "尝试第 $attempt/$max_attempts 次数据导入..."
+        if docker exec $APP_CONTAINER npm run import:data; then
+            success=true
+            break
+        else
+            warn "第 $attempt 次数据导入失败"
+            if [ $attempt -lt $max_attempts ]; then
+                log "等待 5 秒后重试..."
+                sleep 5
+            fi
+            attempt=$((attempt + 1))
+        fi
+    done
+    
+    if [ "$success" = false ]; then
+        error "数据导入失败"
+        exit 1
+    fi
     
     log "数据导入完成"
 }
@@ -201,6 +294,9 @@ show_completion_message() {
     log "  $DOCKER_COMPOSE_CMD down          # 停止服务"
     log "  $DOCKER_COMPOSE_CMD up -d         # 启动服务"
     log "  $DOCKER_COMPOSE_CMD restart       # 重启服务"
+    echo
+    log "如果遇到网络问题，请考虑配置 Docker 镜像加速器:"
+    log "  参考: https://gist.github.com/y0ngb1n/7e8f8898c1788f8bb77d9b555a1d9183"
     echo
     log "API 文档请参考项目 README.md 文件"
 }
