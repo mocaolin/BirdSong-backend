@@ -1,0 +1,214 @@
+#!/bin/bash
+
+# BirdSong API 一键部署脚本
+# 该脚本将自动完成 Docker 环境下的完整部署流程
+
+set -e  # 遇到错误时终止脚本
+
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# 日志函数
+log() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# 检查命令是否存在
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# 检查是否以 root 权限运行
+check_root() {
+    if [[ $EUID -eq 0 ]]; then
+        error "此脚本不应以 root 权限运行"
+        exit 1
+    fi
+}
+
+# 检查依赖
+check_dependencies() {
+    log "检查依赖..."
+    
+    if ! command_exists docker; then
+        error "未找到 Docker，请先安装 Docker"
+        exit 1
+    fi
+    
+    if ! command_exists docker-compose; then
+        error "未找到 docker-compose，请先安装 docker-compose"
+        exit 1
+    fi
+    
+    if ! command_exists git; then
+        error "未找到 git，请先安装 git"
+        exit 1
+    fi
+    
+    log "所有依赖检查通过"
+}
+
+# 克隆或更新代码库
+setup_repository() {
+    if [ -d ".git" ]; then
+        log "更新代码库..."
+        git pull
+    else
+        log "克隆代码库..."
+        # 注意：这里使用占位符，实际使用时需要替换为真实仓库地址
+        git clone <REPOSITORY_URL> .
+    fi
+}
+
+# 配置环境变量
+setup_env() {
+    log "配置环境变量..."
+    
+    if [ ! -f ".env" ]; then
+        warn "未找到 .env 文件，将从 .env.example 创建"
+        if [ -f ".env.example" ]; then
+            cp .env.example .env
+            log "已创建 .env 文件，请根据需要修改其中的配置"
+        else
+            error "未找到 .env.example 文件，无法创建 .env"
+            exit 1
+        fi
+    else
+        log ".env 文件已存在"
+    fi
+}
+
+# 构建并启动 Docker 服务
+deploy_with_docker() {
+    log "开始 Docker 部署..."
+    
+    # 停止可能正在运行的服务
+    log "停止可能正在运行的服务..."
+    docker-compose down >/dev/null 2>&1 || true
+    
+    # 构建并启动服务
+    log "构建并启动服务..."
+    docker-compose up -d --build
+    
+    # 等待服务启动
+    log "等待服务启动..."
+    sleep 10
+    
+    # 检查服务状态
+    log "检查服务状态..."
+    if docker-compose ps | grep -q "Up"; then
+        log "服务启动成功"
+    else
+        error "服务启动失败，请检查日志: docker-compose logs"
+        exit 1
+    fi
+}
+
+# 初始化数据库
+init_database() {
+    log "初始化数据库..."
+    
+    # 获取应用容器名称
+    APP_CONTAINER=$(docker-compose ps -q app)
+    
+    if [ -z "$APP_CONTAINER" ]; then
+        error "未找到应用容器"
+        exit 1
+    fi
+    
+    # 运行数据库初始化
+    log "运行数据库同步..."
+    docker exec $APP_CONTAINER npm run db:init
+    
+    log "数据库初始化完成"
+}
+
+# 导入数据
+import_data() {
+    log "导入数据..."
+    
+    # 获取应用容器名称
+    APP_CONTAINER=$(docker-compose ps -q app)
+    
+    if [ -z "$APP_CONTAINER" ]; then
+        error "未找到应用容器"
+        exit 1
+    fi
+    
+    # 运行数据导入
+    log "运行数据导入..."
+    docker exec $APP_CONTAINER npm run import:data
+    
+    log "数据导入完成"
+}
+
+# 验证部署
+verify_deployment() {
+    log "验证部署..."
+    
+    # 检查 API 是否响应
+    log "检查 API 响应..."
+    sleep 5
+    
+    if command_exists curl; then
+        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/birds?limit=1 || echo "000")
+        if [ "$RESPONSE" == "200" ]; then
+            log "API 响应正常"
+        else
+            warn "API 响应异常，HTTP 状态码: $RESPONSE"
+        fi
+    else
+        warn "未安装 curl，跳过 API 响应检查"
+    fi
+    
+    log "部署验证完成"
+}
+
+# 显示部署完成信息
+show_completion_message() {
+    log "==========================================="
+    log "BirdSong API 部署完成！"
+    log "==========================================="
+    echo
+    log "服务已启动并运行在 http://localhost:3000"
+    echo
+    log "可用的管理命令:"
+    log "  docker-compose logs          # 查看服务日志"
+    log "  docker-compose ps            # 查看服务状态"
+    log "  docker-compose down          # 停止服务"
+    log "  docker-compose up -d         # 启动服务"
+    log "  docker-compose restart       # 重启服务"
+    echo
+    log "API 文档请参考项目 README.md 文件"
+}
+
+# 主函数
+main() {
+    log "开始 BirdSong API 一键部署..."
+    
+    check_root
+    check_dependencies
+    # setup_repository  # 注释掉此行以避免在已有目录中克隆
+    setup_env
+    deploy_with_docker
+    init_database
+    import_data
+    verify_deployment
+    show_completion_message
+    
+    log "一键部署脚本执行完成"
+}
+
+# 执行主函数
+main "$@"
