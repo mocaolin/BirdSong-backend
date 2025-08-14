@@ -32,8 +32,13 @@ command_exists() {
 # 检查是否以 root 权限运行
 check_root() {
     if [[ $EUID -eq 0 ]]; then
-        error "此脚本不应以 root 权限运行"
-        exit 1
+        warn "检测到正在以 root 用户运行脚本，这在某些环境中可能不安全"
+        read -p "是否继续以 root 用户运行? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log "请使用非 root 用户运行此脚本"
+            exit 1
+        fi
     fi
 }
 
