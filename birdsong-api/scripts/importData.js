@@ -10,9 +10,38 @@ import dotenv from 'dotenv';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// 构建数据文件路径
+const birdsJsonPath = path.join(__dirname, '../json_parts/birds.json');
+const recordingsJsonPath = path.join(__dirname, '../json_parts/recordings.json');
+
+// 检查数据文件是否存在
+if (!fs.existsSync(birdsJsonPath)) {
+  console.error(`Birds data file not found: ${birdsJsonPath}`);
+  console.error('Current working directory:', process.cwd());
+  console.error('Files in json_parts directory:');
+  try {
+    const files = fs.readdirSync(path.join(__dirname, '../json_parts'));
+    console.error(files);
+  } catch (err) {
+    console.error('Error reading json_parts directory:', err.message);
+  }
+  process.exit(1);
+}
+
+if (!fs.existsSync(recordingsJsonPath)) {
+  console.error(`Recordings data file not found: ${recordingsJsonPath}`);
+  process.exit(1);
+}
+
 // 读取JSON文件并导入数据
-const birdData = JSON.parse(fs.readFileSync(path.join(__dirname, '../json_parts/birds.json'), 'utf8'));
-const recordingData = JSON.parse(fs.readFileSync(path.join(__dirname, '../json_parts/recordings.json'), 'utf8'));
+let birdData, recordingData;
+try {
+  birdData = JSON.parse(fs.readFileSync(birdsJsonPath, 'utf8'));
+  recordingData = JSON.parse(fs.readFileSync(recordingsJsonPath, 'utf8'));
+} catch (error) {
+  console.error('Error reading or parsing JSON files:', error.message);
+  process.exit(1);
+}
 
 async function importBirds() {
   console.log('Importing birds...');
