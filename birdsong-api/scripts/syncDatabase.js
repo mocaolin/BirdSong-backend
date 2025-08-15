@@ -1,8 +1,8 @@
-import { sequelize } from '../src/models/index.js';
+import db from '../src/models/index.js';
 
 console.log('Syncing database...');
 
-sequelize.sync({ alter: true })
+db.sequelize.sync({ alter: true })
   .then(() => {
     console.log('Database synchronized successfully.');
     process.exit(0);
