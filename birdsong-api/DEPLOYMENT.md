@@ -97,14 +97,14 @@ sudo systemctl start docker
 sudo systemctl enable docker
 ```
 
-#### 2. 克隆代码库
+#### 3. 克隆代码库
 
 ```bash
 git clone <repository-url>
 cd birdsong-api
 ```
 
-#### 3. 配置环境变量
+#### 4. 配置环境变量
 
 创建 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件，配置应用环境变量：
 
@@ -122,7 +122,7 @@ JWT_SECRET=your-super-secret-jwt-key
 
 注意：在 Docker 部署中，[DB_HOST](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/src/config/database.js#L4-L4) 应设置为 [db](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/docker-compose.yml#L4-L4)（docker-compose.yml 中定义的服务名称），而不是 localhost。
 
-#### 4. 构建和启动服务
+#### 5. 构建和启动服务
 
 使用 Docker Compose 启动所有服务（包括 PostgreSQL 数据库和 BirdSong API 应用）：
 
@@ -137,7 +137,7 @@ docker-compose up -d
 
 如果遇到网络连接问题，可能需要配置 Docker 镜像源，请参考 [Docker 镜像源配置](#docker-镜像源配置) 部分。
 
-#### 5. 初始化数据库
+#### 6. 初始化数据库
 
 首次部署时，需要初始化数据库结构：
 
@@ -152,7 +152,7 @@ npm run db:init
 exit
 ```
 
-#### 6. 导入数据
+#### 7. 导入数据
 
 运行数据导入脚本将鸟类和录音数据导入数据库：
 
@@ -167,7 +167,7 @@ npm run import:data
 exit
 ```
 
-#### 7. 验证部署
+#### 8. 验证部署
 
 检查服务状态：
 
@@ -189,29 +189,26 @@ curl http://localhost:3000/api/birds?page=1&limit=5
 
 ### 方式三：直接部署到服务器
 
+如果您遇到 Docker 网络问题或希望直接在服务器上部署应用（不使用容器），可以使用直接部署方式。
+
+项目提供了直接部署脚本 [deploy-direct.sh](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/deploy-direct.sh) 来简化部署过程。
+
 #### 1. 安装依赖
 
-```
-# 安装 Node.js (使用 NodeSource)
-curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-sudo apt-get install -y nodejs
+首先确保服务器上安装了必要的依赖：
 
-# 安装 PostgreSQL
+```bash
+# Ubuntu/Debian
 sudo apt update
-sudo apt install postgresql postgresql-contrib
+sudo apt install nodejs npm git postgresql postgresql-contrib
+
+# CentOS/RHEL
+sudo yum install nodejs npm git postgresql postgresql-contrib
 ```
 
-#### 2. 克隆代码库
+#### 2. 配置 PostgreSQL
 
-```
-git clone <repository-url>
-cd birdsong-api
-npm install --production
-```
-
-#### 3. 配置 PostgreSQL
-
-```
+```bash
 # 启动 PostgreSQL 服务
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
@@ -226,18 +223,46 @@ sudo -u postgres psql
 
 在 PostgreSQL shell 中运行：
 
-```
+```sql
 ALTER USER your_db_user WITH PASSWORD 'your_db_password';
 ALTER USER your_db_user CREATEDB;
 GRANT ALL PRIVILEGES ON DATABASE birdsong_db TO your_db_user;
 \q
 ```
 
-#### 4. 配置环境变量
+#### 3. 克隆代码库
 
-创建 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件：
-
+```bash
+git clone <repository-url>
+cd birdsong-api
 ```
+
+#### 4. 运行直接部署脚本
+
+```bash
+# 给脚本添加执行权限
+chmod +x deploy-direct.sh
+
+# 运行直接部署脚本
+./deploy-direct.sh
+```
+
+脚本将自动完成以下操作：
+1. 检查依赖（Node.js、npm、git）
+2. 配置环境变量
+3. 安装 Node.js 依赖
+4. 检查数据库连接
+5. 初始化数据库
+6. 导入数据
+7. 安装并配置 PM2 进程管理器
+8. 启动应用
+9. 验证部署
+
+#### 5. 配置环境变量
+
+脚本会提示您配置 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件，确保数据库连接参数正确：
+
+```env
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=birdsong_db
@@ -247,6 +272,23 @@ DB_DIALECT=postgres
 PORT=3000
 NODE_ENV=production
 JWT_SECRET=your-super-secret-jwt-key
+```
+
+注意：在直接部署中，[DB_HOST](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/src/config/database.js#L4-L4) 应设置为 `localhost`，而不是 Docker 服务名称。
+
+#### 6. 验证部署
+
+部署完成后，可以通过以下命令验证服务状态：
+
+```bash
+# 查看应用状态
+pm2 list
+
+# 查看应用日志
+pm2 logs birdsong-api
+
+# 测试 API
+curl http://localhost:3000/api/birds?page=1&limit=5
 ```
 
 ## 环境变量配置
