@@ -203,16 +203,82 @@ sudo apt update
 sudo apt install nodejs npm git postgresql postgresql-contrib
 
 # CentOS/RHEL
-sudo yum install nodejs npm git postgresql postgresql-contrib
+sudo yum install nodejs npm git
+# PostgreSQL 安装请参考下面的详细说明
 ```
 
-#### 2. 配置 PostgreSQL
+#### 2. 安装和配置 PostgreSQL（CentOS/RHEL）
+
+在 CentOS/RHEL 系统上安装 PostgreSQL 需要特别注意，因为默认仓库中的版本可能较旧。
+
+##### 安装 PostgreSQL
 
 ```bash
-# 启动 PostgreSQL 服务
+# CentOS 7
+sudo yum install epel-release
+sudo yum install postgresql-server postgresql-contrib
+
+# 初始化数据库（CentOS 7）
+sudo postgresql-setup initdb
+
+# CentOS 8+/RHEL 8+
+# 安装 PostgreSQL 15（推荐）
+sudo dnf install -y epel-release
+sudo dnf install -y postgresql15-server postgresql15-contrib
+
+# 初始化数据库（CentOS 8+/RHEL 8+）
+sudo /usr/pgsql-15/bin/postgresql-15-setup initdb
+```
+
+##### 启动并启用 PostgreSQL 服务
+
+```bash
+# CentOS 7
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
+# CentOS 8+/RHEL 8+（PostgreSQL 15）
+sudo systemctl start postgresql-15
+sudo systemctl enable postgresql-15
+```
+
+##### 配置 PostgreSQL 认证
+
+编辑 PostgreSQL 认证配置文件以允许本地连接：
+
+```bash
+# CentOS 7
+sudo nano /var/lib/pgsql/data/pg_hba.conf
+
+# CentOS 8+/RHEL 8+（PostgreSQL 15）
+sudo nano /var/lib/pgsql/15/data/pg_hba.conf
+```
+
+找到以下行并修改：
+
+```
+# 将:
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            ident
+
+# 修改为:
+local   all             all                                     trust
+host    all             all             127.0.0.1/32            trust
+```
+
+重启 PostgreSQL 服务以应用更改：
+
+```bash
+# CentOS 7
+sudo systemctl restart postgresql
+
+# CentOS 8+/RHEL 8+（PostgreSQL 15）
+sudo systemctl restart postgresql-15
+```
+
+#### 3. 配置 PostgreSQL
+
+```bash
 # 切换到 postgres 用户并创建数据库
 sudo -u postgres createdb birdsong_db
 sudo -u postgres createuser your_db_user
@@ -230,14 +296,14 @@ GRANT ALL PRIVILEGES ON DATABASE birdsong_db TO your_db_user;
 \q
 ```
 
-#### 3. 克隆代码库
+#### 4. 克隆代码库
 
 ```bash
 git clone <repository-url>
 cd birdsong-api
 ```
 
-#### 4. 运行直接部署脚本
+#### 5. 运行直接部署脚本
 
 ```bash
 # 给脚本添加执行权限
@@ -258,7 +324,7 @@ chmod +x deploy-direct.sh
 8. 启动应用
 9. 验证部署
 
-#### 5. 配置环境变量
+#### 6. 配置环境变量
 
 脚本会提示您配置 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件，确保数据库连接参数正确：
 
@@ -276,7 +342,7 @@ JWT_SECRET=your-super-secret-jwt-key
 
 注意：在直接部署中，[DB_HOST](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/src/config/database.js#L4-L4) 应设置为 `localhost`，而不是 Docker 服务名称。
 
-#### 6. 验证部署
+#### 7. 验证部署
 
 部署完成后，可以通过以下命令验证服务状态：
 
@@ -498,6 +564,45 @@ sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
 ```
+
+### 4. PostgreSQL 服务未找到（CentOS）
+
+如果您在 CentOS 系统上遇到 `Failed to start postgresql.service: Unit not found` 错误，请按照以下步骤操作：
+
+1. 确认 PostgreSQL 是否已安装：
+   ```bash
+   # 检查是否安装了 PostgreSQL
+   rpm -qa | grep postgresql
+   
+   # 或者尝试查找 PostgreSQL 相关包
+   yum list installed | grep postgresql
+   ```
+
+2. 如果未安装，请按照[安装和配置 PostgreSQL（CentOS/RHEL）](#2-安装和配置-postgresqlcentosrhel)部分的说明进行安装。
+
+3. 如果已安装但服务名称不同，请尝试以下命令查找正确的服务名称：
+   ```bash
+   # 查找所有 PostgreSQL 相关服务
+   systemctl list-unit-files | grep postgresql
+   
+   # 或者查找正在运行的服务
+   ps aux | grep postgres
+   ```
+
+4. 根据找到的服务名称启动 PostgreSQL：
+   ```bash
+   # 常见的服务名称
+   sudo systemctl start postgresql
+   sudo systemctl start postgresql-15
+   sudo systemctl start postgresql-13
+   ```
+
+5. 设置开机自启：
+   ```bash
+   # 根据实际服务名称设置
+   sudo systemctl enable postgresql
+   sudo systemctl enable postgresql-15
+   ```
 
 ## Docker 镜像源配置
 
