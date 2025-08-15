@@ -771,7 +771,7 @@ SyntaxError: The requested module '../src/models/index.js' does not provide an e
 
 确保在使用 ES Modules 时，导入语句语法正确：
 
-```javascript
+```
 // 正确的导入方式
 import db from '../src/models/index.js';
 // 然后使用 db.sequelize
@@ -783,6 +783,66 @@ import { sequelize } from '../src/models/index.js';
 #### 方法三：使用相对路径
 
 确保所有导入路径都是相对路径，并且包含文件扩展名（.js）。
+
+### 9. 数据导入失败
+
+如果您在运行数据导入脚本时遇到类似以下的错误：
+
+```
+Error: ENOENT: no such file or directory, open '/app/json_parts/birds.json'
+```
+
+这通常是因为在 Docker 环境中，JSON 数据文件没有被正确挂载或复制到容器中。我们已经修复了相关配置，但如果仍然遇到问题，请尝试以下解决方案：
+
+#### 方法一：检查数据文件是否存在
+
+确保 [json_parts](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/json_parts) 目录包含所有必要的 JSON 文件：
+
+```bash
+ls -la json_parts/
+```
+
+您应该看到类似以下的文件：
+- birds.json
+- recordings.json
+
+或者多个 metadata_part*.json 文件。
+
+#### 方法二：检查 Docker 挂载配置
+
+确保 [docker-compose.yml](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/docker-compose.yml) 文件中正确配置了卷挂载：
+
+```yaml
+volumes:
+  - ./json_parts:/app/json_parts
+```
+
+#### 方法三：重建 Docker 镜像
+
+有时需要清理并重建 Docker 镜像：
+
+```bash
+# 停止并删除现有容器
+docker-compose down
+
+# 清理构建缓存
+docker builder prune -a
+
+# 重新构建并启动服务
+docker-compose up -d --build
+```
+
+#### 方法四：手动复制数据文件到容器
+
+如果挂载方式不工作，您可以手动将数据文件复制到容器中：
+
+```bash
+# 复制数据文件到容器
+docker cp json_parts birdsong_api:/app/
+
+# 进入容器并运行导入脚本
+docker exec -it birdsong_api npm run import:data
+```
 
 ## Docker 镜像源配置
 
