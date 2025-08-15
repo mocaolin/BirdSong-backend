@@ -11,33 +11,48 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 构建数据文件路径
-const birdsJsonPath = path.join(__dirname, '../json_parts/birds.json');
-const recordingsJsonPath = path.join(__dirname, '../json_parts/recordings.json');
+const jsonPartsDir = path.join(__dirname, '../json_parts');
 
-// 检查数据文件是否存在
-if (!fs.existsSync(birdsJsonPath)) {
-  console.error(`Birds data file not found: ${birdsJsonPath}`);
+// 检查数据目录是否存在
+if (!fs.existsSync(jsonPartsDir)) {
+  console.error(`JSON data directory not found: ${jsonPartsDir}`);
   console.error('Current working directory:', process.cwd());
-  console.error('Files in json_parts directory:');
-  try {
-    const files = fs.readdirSync(path.join(__dirname, '../json_parts'));
-    console.error(files);
-  } catch (err) {
-    console.error('Error reading json_parts directory:', err.message);
-  }
   process.exit(1);
 }
 
-if (!fs.existsSync(recordingsJsonPath)) {
-  console.error(`Recordings data file not found: ${recordingsJsonPath}`);
-  process.exit(1);
-}
+// 读取所有分片的JSON文件
+let birdData = [];
+let recordingData = [];
 
-// 读取JSON文件并导入数据
-let birdData, recordingData;
 try {
-  birdData = JSON.parse(fs.readFileSync(birdsJsonPath, 'utf8'));
-  recordingData = JSON.parse(fs.readFileSync(recordingsJsonPath, 'utf8'));
+  const files = fs.readdirSync(jsonPartsDir);
+  console.log(`Found ${files.length} files in json_parts directory`);
+  
+  // 过滤出JSON文件并按名称排序
+  const jsonFiles = files
+    .filter(file => path.extname(file) === '.json')
+    .sort();
+  
+  console.log(`Processing ${jsonFiles.length} JSON files`);
+  
+  // 读取所有JSON文件
+  for (const file of jsonFiles) {
+    const filePath = path.join(jsonPartsDir, file);
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const jsonData = JSON.parse(fileContent);
+    
+    // 合并数据
+    if (jsonData.birds) {
+      birdData = birdData.concat(jsonData.birds);
+    }
+    
+    if (jsonData.recordings) {
+      recordingData = recordingData.concat(jsonData.recordings);
+    }
+  }
+  
+  console.log(`Total birds data: ${birdData.length}`);
+  console.log(`Total recordings data: ${recordingData.length}`);
 } catch (error) {
   console.error('Error reading or parsing JSON files:', error.message);
   process.exit(1);

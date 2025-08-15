@@ -33,8 +33,7 @@ services:
     depends_on:
       - db
     volumes:
-      - ./json_parts:/app/json_parts
-      - ./data:/app/data
+      - ../json_parts:/app/json_parts
 
 volumes:
   postgres_data:
