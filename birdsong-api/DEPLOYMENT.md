@@ -803,10 +803,9 @@ ls -la json_parts/
 ```
 
 您应该看到类似以下的文件：
-- birds.json
-- recordings.json
-
-或者多个 metadata_part*.json 文件。
+- metadata_part1.json
+- metadata_part2.json
+- ...
 
 #### 方法二：检查 Docker 挂载配置
 
@@ -814,8 +813,10 @@ ls -la json_parts/
 
 ```yaml
 volumes:
-  - ./json_parts:/app/json_parts
+  - ../json_parts:/app/json_parts
 ```
+
+注意：数据文件位于项目根目录的 [json_parts](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/json_parts) 目录中，而不是 [birdsong-api/json_parts](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/json_parts) 目录中。
 
 #### 方法三：重建 Docker 镜像
 
@@ -838,11 +839,15 @@ docker-compose up -d --build
 
 ```bash
 # 复制数据文件到容器
-docker cp json_parts birdsong_api:/app/
+docker cp ../json_parts birdsong_api:/app/
 
 # 进入容器并运行导入脚本
 docker exec -it birdsong_api npm run import:data
 ```
+
+#### 方法五：检查数据文件格式
+
+数据文件是以分片形式存储的，每个文件包含部分鸟类和录音数据。确保导入脚本能够正确处理这些分片文件。
 
 ## Docker 镜像源配置
 
