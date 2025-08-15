@@ -634,6 +634,118 @@ npm ERR! `npm ci` can only install packages when your package.json and package-l
 2. 或者让部署脚本自动处理：
    我们的部署脚本（[deploy.sh](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/deploy.sh) 和 [deploy-direct.sh](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/deploy-direct.sh)）已经更新，可以自动处理不同版本的 npm 命令并确保依赖文件同步。
 
+### 6. 无法安装 docker-compose
+
+如果您无法通过包管理器安装 docker-compose，可以尝试以下方法：
+
+#### 方法一：使用 Docker Compose V2（推荐）
+
+Docker Compose 现在已经集成到 Docker CLI 中。您可以使用 `docker compose` 命令（注意中间有空格）替代 `docker-compose` 命令。
+
+检查是否已安装：
+```bash
+docker compose version
+```
+
+#### 方法二：手动安装 docker-compose
+
+```
+# 下载最新版本的 docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# 添加执行权限
+sudo chmod +x /usr/local/bin/docker-compose
+
+# 验证安装
+docker-compose --version
+```
+
+#### 方法三：使用 pip 安装
+
+```
+# 安装 pip（如果尚未安装）
+sudo apt install python3-pip  # Ubuntu/Debian
+sudo yum install python3-pip   # CentOS/RHEL
+
+# 使用 pip 安装 docker-compose
+sudo pip3 install docker-compose
+```
+
+#### 方法四：使用直接部署方式
+
+如果仍然无法安装 docker-compose，建议使用[直接部署方式](#方式三直接部署到服务器)，该方式不依赖 Docker，可以直接在服务器上运行应用。
+
+### 7. Docker 构建失败
+
+如果您在构建 Docker 镜像时遇到类似以下的错误：
+
+```
+failed to solve: process "/bin/sh -c addgroup -g 1001 -S nodejs" did not complete successfully: exit code: 1
+```
+
+这通常是因为 Dockerfile 中的用户/组创建命令与基础镜像不兼容。我们已经更新了 Dockerfile 以解决此问题，但如果仍然遇到问题，请尝试以下解决方案：
+
+#### 方法一：清理 Docker 构建缓存
+
+```
+# 清理所有 Docker 构建缓存
+docker builder prune -a
+
+# 或者清理所有未使用的数据
+docker system prune -a
+```
+
+#### 方法二：使用不包含用户创建的简化 Dockerfile
+
+如果问题仍然存在，您可以使用一个简化的 Dockerfile：
+
+```
+# 使用官方 Node.js 运行时作为基础镜像
+FROM node:16
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制 package.json 和 package-lock.json（如果存在）
+COPY package*.json ./
+
+# 安装生产依赖
+RUN npm ci --omit=dev
+
+# 复制应用代码
+COPY . .
+
+# 暴露端口
+EXPOSE 3000
+
+# 启动应用
+CMD ["npm", "start"]
+```
+
+然后使用以下命令构建和运行：
+
+```bash
+# 构建镜像
+docker build -t birdsong-api .
+
+# 运行容器
+docker run -p 3000:3000 --name birdsong_api birdsong-api
+```
+
+#### 方法三：检查 Docker 版本兼容性
+
+确保您的 Docker 版本与 docker-compose 版本兼容：
+
+```bash
+# 检查 Docker 版本
+docker --version
+
+# 检查 docker-compose 版本
+docker-compose --version
+```
+
+如果版本过旧，建议升级到最新稳定版本。
+
 ## Docker 镜像源配置
 
 在某些网络环境下（特别是中国大陆地区），直接从 Docker Hub 拉取镜像可能会遇到网络超时问题。为了解决这个问题，可以配置 Docker 镜像加速器。
