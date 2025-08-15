@@ -81,6 +81,10 @@ setup_repository() {
         # 注意：这里使用占位符，实际使用时需要替换为真实仓库地址
         git clone <REPOSITORY_URL> .
     fi
+    
+    # 更新 package-lock.json 文件以确保与 package.json 同步
+    log "同步依赖锁定文件..."
+    npm install --package-lock-only --omit=dev
 }
 
 # 配置环境变量

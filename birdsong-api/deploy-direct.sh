@@ -120,7 +120,13 @@ install_dependencies() {
     
     # 安装生产依赖
     log "安装生产依赖..."
-    npm ci --only=production
+    if npm ci --help | grep -q '\--omit'; then
+        # 新版本 npm 使用 --omit
+        npm ci --omit=dev
+    else
+        # 旧版本 npm 使用 --only
+        npm ci --only=production
+    fi
     
     log "Node.js 依赖安装完成"
 }
