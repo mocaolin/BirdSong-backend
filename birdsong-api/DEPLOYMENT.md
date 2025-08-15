@@ -746,6 +746,44 @@ docker-compose --version
 
 如果版本过旧，建议升级到最新稳定版本。
 
+### 8. ES Modules 导入错误
+
+如果您在运行数据库脚本时遇到类似以下的错误：
+
+```
+SyntaxError: The requested module '../src/models/index.js' does not provide an export named 'sequelize'
+```
+
+这通常是因为在 ES Modules 中导入方式不正确。我们已经修复了相关脚本，但如果仍然遇到问题，请尝试以下解决方案：
+
+#### 方法一：检查 package.json 配置
+
+确保 [package.json](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/node_modules/@babel/core/package.json) 文件中包含 `"type": "module"` 字段：
+
+```json
+{
+  "type": "module"
+  // ... 其他配置
+}
+```
+
+#### 方法二：检查导入语句
+
+确保在使用 ES Modules 时，导入语句语法正确：
+
+```javascript
+// 正确的导入方式
+import db from '../src/models/index.js';
+// 然后使用 db.sequelize
+
+// 错误的导入方式
+import { sequelize } from '../src/models/index.js';
+```
+
+#### 方法三：使用相对路径
+
+确保所有导入路径都是相对路径，并且包含文件扩展名（.js）。
+
 ## Docker 镜像源配置
 
 在某些网络环境下（特别是中国大陆地区），直接从 Docker Hub 拉取镜像可能会遇到网络超时问题。为了解决这个问题，可以配置 Docker 镜像加速器。
