@@ -17,6 +17,36 @@ const jsonPartsDir = path.join(__dirname, '../json_parts');
 if (!fs.existsSync(jsonPartsDir)) {
   console.error(`JSON data directory not found: ${jsonPartsDir}`);
   console.error('Current working directory:', process.cwd());
+  console.error('User ID:', process.getuid());
+  console.error('Group ID:', process.getgid());
+  
+  // 尝试列出上级目录内容
+  try {
+    const parentDir = path.join(__dirname, '..');
+    console.error('Files in parent directory:', fs.readdirSync(parentDir));
+  } catch (err) {
+    console.error('Error reading parent directory:', err.message);
+  }
+  
+  process.exit(1);
+}
+
+// 检查目录访问权限
+try {
+  fs.accessSync(jsonPartsDir, fs.constants.R_OK);
+} catch (err) {
+  console.error(`Permission denied accessing directory: ${jsonPartsDir}`);
+  console.error('Error details:', err.message);
+  console.error('Current user:', process.getuid());
+  
+  // 尝试列出目录信息
+  try {
+    const stats = fs.statSync(jsonPartsDir);
+    console.error('Directory stats:', stats);
+  } catch (statErr) {
+    console.error('Error getting directory stats:', statErr.message);
+  }
+  
   process.exit(1);
 }
 
@@ -55,6 +85,8 @@ try {
   console.log(`Total recordings data: ${recordingData.length}`);
 } catch (error) {
   console.error('Error reading or parsing JSON files:', error.message);
+  console.error('Error code:', error.code);
+  console.error('Current working directory:', process.cwd());
   process.exit(1);
 }
 

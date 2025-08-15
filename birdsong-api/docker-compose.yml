@@ -34,6 +34,8 @@ services:
       - db
     volumes:
       - ../json_parts:/app/json_parts
+      # 设置挂载卷的用户ID，确保容器内用户可以访问
+    user: "1001:1001"
 
 volumes:
   postgres_data:

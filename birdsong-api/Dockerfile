@@ -17,8 +17,10 @@ COPY . .
 RUN addgroup -g 1001 nodejs && \
     adduser -D -u 1001 -G nodejs nextjs
 
-# 更改文件所有权
+# 更改文件所有权，确保 nextjs 用户可以访问所有文件
 RUN chown -R nextjs:nodejs /app
+
+# 切换到非 root 用户
 USER nextjs
 
 # 暴露端口
