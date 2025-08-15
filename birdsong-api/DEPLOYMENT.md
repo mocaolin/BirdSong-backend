@@ -849,6 +849,61 @@ docker exec -it birdsong_api npm run import:data
 
 数据文件是以分片形式存储的，每个文件包含部分鸟类和录音数据。确保导入脚本能够正确处理这些分片文件。
 
+### 10. 权限问题
+
+如果您在运行数据导入脚本时遇到类似以下的错误：
+
+```
+Error reading or parsing JSON files: EACCES: permission denied, scandir '/app/json_parts'
+```
+
+这通常是因为在 Docker 环境中，容器用户没有足够的权限访问挂载的卷。我们已经更新了相关配置，但如果仍然遇到问题，请尝试以下解决方案：
+
+#### 方法一：检查宿主机目录权限
+
+检查宿主机上 [json_parts](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/json_parts) 目录的权限：
+
+```bash
+ls -la ../json_parts/
+```
+
+#### 方法二：修改目录权限
+
+如果需要，修改目录权限：
+
+```bash
+sudo chmod -R 755 ../json_parts/
+```
+
+或者确保用户有访问权限：
+
+```bash
+sudo chown -R $USER:$USER ../json_parts/
+```
+
+#### 方法三：检查 Docker 配置
+
+确保 [docker-compose.yml](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/docker-compose.yml) 文件中正确设置了用户 ID：
+
+```yaml
+user: "1001:1001"
+```
+
+#### 方法四：重建 Docker 镜像
+
+清理并重建 Docker 镜像：
+
+```bash
+# 停止并删除现有容器
+docker-compose down
+
+# 清理构建缓存
+docker builder prune -a
+
+# 重新构建并启动服务
+docker-compose up -d --build
+```
+
 ## Docker 镜像源配置
 
 在某些网络环境下（特别是中国大陆地区），直接从 Docker Hub 拉取镜像可能会遇到网络超时问题。为了解决这个问题，可以配置 Docker 镜像加速器。
