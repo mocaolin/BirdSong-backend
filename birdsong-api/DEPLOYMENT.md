@@ -22,7 +22,9 @@
 
 ## 系统要求
 
-- Docker 和 Docker Compose
+- Docker 和 Docker Compose (如果使用 Docker 部署方式)
+- Node.js >= 14.x
+- npm >= 6.x
 - 至少 2GB RAM 的服务器
 - 约 2GB 磁盘空间
 
@@ -34,7 +36,7 @@
 
 #### 1. 下载脚本
 
-```bash
+```
 # 克隆代码库
 git clone <repository-url>
 cd birdsong-api
@@ -42,7 +44,7 @@ cd birdsong-api
 
 #### 2. 运行一键部署脚本
 
-```bash
+```
 # 给脚本添加执行权限
 chmod +x deploy.sh
 
@@ -62,7 +64,7 @@ chmod +x deploy.sh
 
 部署完成后，可以通过以下命令验证服务状态：
 
-```bash
+```
 # 查看服务状态
 docker-compose ps
 
@@ -79,7 +81,7 @@ curl http://localhost:3000/api/birds?page=1&limit=5
 
 在服务器上安装 Docker 和 Docker Compose：
 
-```bash
+```
 # Ubuntu/Debian
 sudo apt update
 sudo apt install docker.io docker-compose
@@ -92,14 +94,14 @@ sudo yum install docker docker-compose
 
 启动并启用 Docker：
 
-```bash
+```
 sudo systemctl start docker
 sudo systemctl enable docker
 ```
 
 #### 3. 克隆代码库
 
-```bash
+```
 git clone <repository-url>
 cd birdsong-api
 ```
@@ -108,7 +110,7 @@ cd birdsong-api
 
 创建 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件，配置应用环境变量：
 
-```env
+```
 DB_HOST=db
 DB_PORT=5432
 DB_NAME=birdsong_db
@@ -126,7 +128,7 @@ JWT_SECRET=your-super-secret-jwt-key
 
 使用 Docker Compose 启动所有服务（包括 PostgreSQL 数据库和 BirdSong API 应用）：
 
-```bash
+```
 docker-compose up -d
 ```
 
@@ -141,7 +143,7 @@ docker-compose up -d
 
 首次部署时，需要初始化数据库结构：
 
-```bash
+```
 # 进入应用容器
 docker exec -it birdsong_api bash
 
@@ -156,7 +158,7 @@ exit
 
 运行数据导入脚本将鸟类和录音数据导入数据库：
 
-```bash
+```
 # 进入应用容器
 docker exec -it birdsong_api bash
 
@@ -171,19 +173,19 @@ exit
 
 检查服务状态：
 
-```bash
+```
 docker-compose ps
 ```
 
 查看应用日志：
 
-```bash
+```
 docker-compose logs app
 ```
 
 测试 API 是否正常工作：
 
-```bash
+```
 curl http://localhost:3000/api/birds?page=1&limit=5
 ```
 
@@ -197,7 +199,7 @@ curl http://localhost:3000/api/birds?page=1&limit=5
 
 首先确保服务器上安装了必要的依赖：
 
-```bash
+```
 # Ubuntu/Debian
 sudo apt update
 sudo apt install nodejs npm git postgresql postgresql-contrib
@@ -207,13 +209,15 @@ sudo yum install nodejs npm git
 # PostgreSQL 安装请参考下面的详细说明
 ```
 
+注意：如果您的系统中 npm 版本较新（npm 7+），请确保 [package.json](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/node_modules/@babel/core/package.json) 和 [package-lock.json](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/package-lock.json) 文件保持同步。部署脚本会自动处理这个问题。
+
 #### 2. 安装和配置 PostgreSQL（CentOS/RHEL）
 
 在 CentOS/RHEL 系统上安装 PostgreSQL 需要特别注意，因为默认仓库中的版本可能较旧。
 
 ##### 安装 PostgreSQL
 
-```bash
+```
 # CentOS 7
 sudo yum install epel-release
 sudo yum install postgresql-server postgresql-contrib
@@ -232,7 +236,7 @@ sudo /usr/pgsql-15/bin/postgresql-15-setup initdb
 
 ##### 启动并启用 PostgreSQL 服务
 
-```bash
+```
 # CentOS 7
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
@@ -246,7 +250,7 @@ sudo systemctl enable postgresql-15
 
 编辑 PostgreSQL 认证配置文件以允许本地连接：
 
-```bash
+```
 # CentOS 7
 sudo nano /var/lib/pgsql/data/pg_hba.conf
 
@@ -268,7 +272,7 @@ host    all             all             127.0.0.1/32            trust
 
 重启 PostgreSQL 服务以应用更改：
 
-```bash
+```
 # CentOS 7
 sudo systemctl restart postgresql
 
@@ -278,7 +282,7 @@ sudo systemctl restart postgresql-15
 
 #### 3. 配置 PostgreSQL
 
-```bash
+```
 # 切换到 postgres 用户并创建数据库
 sudo -u postgres createdb birdsong_db
 sudo -u postgres createuser your_db_user
@@ -289,7 +293,7 @@ sudo -u postgres psql
 
 在 PostgreSQL shell 中运行：
 
-```sql
+```
 ALTER USER your_db_user WITH PASSWORD 'your_db_password';
 ALTER USER your_db_user CREATEDB;
 GRANT ALL PRIVILEGES ON DATABASE birdsong_db TO your_db_user;
@@ -298,14 +302,14 @@ GRANT ALL PRIVILEGES ON DATABASE birdsong_db TO your_db_user;
 
 #### 4. 克隆代码库
 
-```bash
+```
 git clone <repository-url>
 cd birdsong-api
 ```
 
 #### 5. 运行直接部署脚本
 
-```bash
+```
 # 给脚本添加执行权限
 chmod +x deploy-direct.sh
 
@@ -328,7 +332,7 @@ chmod +x deploy-direct.sh
 
 脚本会提示您配置 [.env](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/.env) 文件，确保数据库连接参数正确：
 
-```env
+```
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=birdsong_db
@@ -346,7 +350,7 @@ JWT_SECRET=your-super-secret-jwt-key
 
 部署完成后，可以通过以下命令验证服务状态：
 
-```bash
+```
 # 查看应用状态
 pm2 list
 
@@ -603,6 +607,32 @@ sudo swapon /swapfile
    sudo systemctl enable postgresql
    sudo systemctl enable postgresql-15
    ```
+
+### 5. npm ci 命令错误
+
+如果您遇到类似以下的错误：
+
+```
+npm WARN config only Use `--omit=dev` to omit dev dependencies from the install.
+npm ERR! code EUSAGE
+npm ERR!
+npm ERR! `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync.
+```
+
+这通常是因为以下两个原因之一：
+
+1. **npm 版本较新**：npm 7+ 版本改变了参数语法，使用 `--omit=dev` 替代了 `--only=production`。
+
+2. **依赖文件不同步**：[package.json](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/node_modules/@babel/core/package.json) 和 [package-lock.json](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/package-lock.json) 文件不同步。
+
+解决方法：
+1. 更新 [package-lock.json](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/package-lock.json) 文件：
+   ```bash
+   npm install --package-lock-only
+   ```
+
+2. 或者让部署脚本自动处理：
+   我们的部署脚本（[deploy.sh](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/deploy.sh) 和 [deploy-direct.sh](file:///Users/jacklin/Documents/BackEndProject/BirdSong-backend/birdsong-api/deploy-direct.sh)）已经更新，可以自动处理不同版本的 npm 命令并确保依赖文件同步。
 
 ## Docker 镜像源配置
 
